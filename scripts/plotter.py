@@ -13,7 +13,7 @@ def parse_options():
     parser = ArgumentParser(description="Process some integers.")
     parser.add_argument("--dataset", type=str, default="top", help="Folder containing input files")
     parser.add_argument("--folder", type=str, default="/pscratch/sd/v/vmikuni/PET/", help="Folder containing input files")
-    parser.add_argument("--plot_folder", type=str, default="../plots", help="Folder to save the outputs")
+    parser.add_argument("--plot_folder", type=str, default="./plots", help="Folder to save the outputs")
     parser.add_argument("--n_bins", type=int, default=50, help="Number of bins for the histograms")
     return parser.parse_args()
 
@@ -23,7 +23,7 @@ def load_data(flags):
         test = utils.TopDataLoader(os.path.join(flags.folder,'TOP', 'test_ttbar.h5'))
 
     if flags.dataset == 'tau':
-        test = utils.TauDataLoader(os.path.join(flags.folder,'TAU', 'test_tau.h5'))
+        test = utils.TauDataLoader(os.path.join(flags.folder, 'TAU', 'test_tau.h5'))
     elif flags.dataset == 'qg':
         test = utils.QGDataLoader(os.path.join(flags.folder,'QG', 'test_qg.h5'))
         

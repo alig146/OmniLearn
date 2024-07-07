@@ -94,9 +94,11 @@ class DataLoader:
         return [data_chunk,points_chunk,mask_chunk,jet_chunk],label_chunk
 
     def make_eval_data(self):
-        X = self.preprocess(self.X,self.mask).astype(np.float32)
+        # X = self.preprocess(self.X,self.mask).astype(np.float32)
+        X = self.X.astype(np.float32)
         X = self.pad(X,num_pad=self.num_pad)
-        jet = self.preprocess_jet(self.jet).astype(np.float32)
+        # jet = self.preprocess_jet(self.jet).astype(np.float32)
+        jet = self.jet.astype(np.float32)
 
         tf_zip = tf.data.Dataset.from_tensor_slices(
             {'input_features':X,
@@ -108,9 +110,12 @@ class DataLoader:
         return tf_zip.cache().batch(self.batch_size).prefetch(tf.data.AUTOTUNE), self.y
 
     def make_tfdata(self):
-        X = self.preprocess(self.X,self.mask).astype(np.float32)
+        # X = self.preprocess(self.X,self.mask).astype(np.float32)
+        X = self.X.astype(np.float32)
         X = self.pad(X,num_pad=self.num_pad)
-        jet = self.preprocess_jet(self.jet).astype(np.float32)
+        # jet = self.preprocess_jet(self.jet).astype(np.float32)
+        jet = self.jet.astype(np.float32)
+
         tf_zip = tf.data.Dataset.from_tensor_slices(
             {'input_features':X,
              'input_points':X[:,:,:2],
@@ -479,26 +484,97 @@ class TopDataLoader(DataLoader):
         self.files = [path]
 
 class TauDataLoader(DataLoader):    
-    def __init__(self, path, batch_size=512,rank=0,size=1,nevts=None):
+    def __init__(self, path, batch_size=512,rank=0,size=1):
         super().__init__(path, batch_size, rank, size)
 
-        self.mean_part = [ 0.0, 0.0, -4.68198519e-02,  2.20178221e-01,
-                                -7.48168704e-02,  2.56480441e-01,  0.0,
-                                0.0, 0.0,  0.0,  0.0,  0.0, 0.0]
-        self.std_part =  [0.03927566, 0.04606768, 0.25982114,
-                               0.82466037, 0.7541279,  0.86455974,1.0,
-                               1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-        self.mean_jet = [6.16614813e+01, 2.05619964e-03, 3.52885518e+00, 4.28755680e+00]
-        self.std_jet  = [34.22578952,  0.68952567,  4.54982729,  3.20547624]
+        # self.jet_names = ['ditau_ditau_pt',
+        #         'ditau_n_tracks_lead',
+        #         'ditau_n_tracks_subl',
+        #         'ditau_R_max_lead',
+        #         'ditau_R_max_subl',
+        #         'ditau_R_tracks_subl',
+        #         'ditau_R_isotrack',
+        #         'ditau_d0_leadtrack_lead',
+        #         'ditau_d0_leadtrack_subl',
+        #         'ditau_f_core_lead',
+        #         'ditau_f_core_subl',
+        #         'ditau_f_subjet_subl',
+        #         'ditau_f_subjets',
+        #         'ditau_f_isotracks',
+        #         'ditau_m_core_lead',
+        #         'ditau_m_core_subl',
+        #         'ditau_m_tracks_lead',
+        #         'ditau_m_tracks_subl',
+        #         'ditau_n_track',
+        #         'ditau_eta',
+        #         'lead_subjet_pt',
+        #         'sublead_subjet_pt']
 
-        self.load_data(path, batch_size,rank,size,nevts = nevts)
+        # self.part_names = ['trackPt', 'trackEta', 'trackPhi', 
+        #     'numberOfInnermostPixelLayerHits', 'numberOfPixelHits', 'numberOfPixelSharedHits',
+        #     'numberOfPixelDeadSensors', 'numberOfSCTSharedHits', 'numberOfSCTDeadSensors',
+        #     'numberOfTRTHighThresholdHits', 'numberOfTRTHits', 'expectInnermostPixelLayerHit',
+        #     'expectNextToInnermostPixelLayerHit', 'numberOfContribPixelLayers', 'numberOfPixelHoles',
+        #     'numberOfSCTHoles', 'numberOfSCTHits', 'qOverP', 'd0TJVA', 'z0TJVA', 'charge']
 
+
+        self.jet_names = ['ditau_ditau_pt',
+                'ditau_eta',
+                'ditau_phi',
+                'ditau_n_tracks_lead',
+                'ditau_n_tracks_subl',
+                'ditau_R_max_lead',
+                'ditau_R_max_subl',
+                'ditau_R_tracks_subl',
+                'ditau_R_isotrack',
+                'ditau_d0_leadtrack_lead',
+                'ditau_d0_leadtrack_subl',
+                'ditau_f_core_lead',
+                'ditau_f_core_subl',
+                'ditau_f_subjet_subl',
+                'ditau_f_subjets',
+                'ditau_f_isotracks',
+                'ditau_m_core_lead',
+                'ditau_m_core_subl',
+                'ditau_m_tracks_lead',
+                'ditau_m_tracks_subl',
+                'ditau_n_track']
+
+        self.part_names = ['trackDeltaEta', 'trackDeltaPhi', 'log(trackPt)', 'd0TJVA', 'z0TJVA', 'dR', 'numberOfInnermostPixelLayerHits', 'numberOfPixelHits', 'numberOfSCTHits', 'charge']
+
+        self.load_data(path, batch_size,rank,size)
         self.num_pad = 0
         self.num_feat = self.X.shape[2] + self.num_pad #missing inputs
-        
+        self.y = np.identity(2)[self.y.astype(np.int32)]
+
+
+        # print("YYYYYYY: ", self.y.shape)
+        # self.y = np.zeros((self.X.shape[0],1))
         self.num_classes = self.y.shape[1]
         self.steps_per_epoch = None #will pass none, otherwise needs to add repeat to tf data
         self.files = [path]
+
+# class TauDataLoader(DataLoader):    
+#     def __init__(self, path, batch_size=512,rank=0,size=1,nevts=None):
+#         super().__init__(path, batch_size, rank, size)
+
+#         self.mean_part = [ 0.0, 0.0, -4.68198519e-02,  2.20178221e-01,
+#                                 -7.48168704e-02,  2.56480441e-01,  0.0,
+#                                 0.0, 0.0,  0.0,  0.0,  0.0, 0.0]
+#         self.std_part =  [0.03927566, 0.04606768, 0.25982114,
+#                                0.82466037, 0.7541279,  0.86455974,1.0,
+#                                1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+#         self.mean_jet = [6.16614813e+01, 2.05619964e-03, 3.52885518e+00, 4.28755680e+00]
+#         self.std_jet  = [34.22578952,  0.68952567,  4.54982729,  3.20547624]
+
+#         self.load_data(path, batch_size,rank,size,nevts = nevts)
+
+#         self.num_pad = 0
+#         self.num_feat = self.X.shape[2] + self.num_pad #missing inputs
+        
+#         self.num_classes = self.y.shape[1]
+#         self.steps_per_epoch = None #will pass none, otherwise needs to add repeat to tf data
+#         self.files = [path]
 
         
 class AtlasDataLoader(DataLoader):    

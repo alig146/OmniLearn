@@ -81,6 +81,12 @@ def get_data_info(flags):
         threshold = [0.3,0.5]
         folder_name = 'QG'
 
+    elif flags.dataset == 'tau':
+        test = utils.TauDataLoader(os.path.join(flags.folder,'TAU', 'test_tau.h5'),
+                                  flags.batch,rank = hvd.rank(),size = hvd.size())
+        threshold = [0.3,0.5]
+        folder_name = 'TAU'
+
     elif flags.dataset == 'atlas':
         test = utils.AtlasDataLoader(os.path.join(flags.folder,'ATLASTOP', 'test_atlas.h5'),
                                      flags.batch,rank = hvd.rank(),size = hvd.size())
@@ -154,6 +160,7 @@ def load_or_evaluate_model(flags, test,folder_name):
             utils.get_model_name(flags,fine_tune=flags.fine_tune,add_string=add_string)))
         
         y = hvd.allgather(tf.constant(y)).numpy()
+        print("AAAAA: ", y)
         pred = hvd.allgather(tf.constant(model.predict(X, verbose=hvd.rank() == 0)[0])).numpy()
         if hvd.rank()==0:
             if not os.path.exists(os.path.join(flags.folder,folder_name,'npy')):

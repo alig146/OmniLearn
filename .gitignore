@@ -1,0 +1,8 @@
+*~
+*.out
+*.h5
+scripts/tau/
+tau_old/
+qg/
+scripts/__pycache__/
+scripts/.ipynb_checkpoints/

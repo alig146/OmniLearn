@@ -12,10 +12,10 @@ class PET(keras.Model):
                  num_feat,
                  num_jet,      
                  num_classes=2,
-                 num_keep = 7, #Number of features that wont be dropped
+                 num_keep = 9, #Number of features that wont be dropped
                  feature_drop = 0.1,
                  projection_dim = 128,
-                 local = True, K = 10,
+                 local = True, K = 5,
                  num_local = 2, 
                  num_layers = 8, num_class_layers=2,
                  num_gen_layers = 2,
