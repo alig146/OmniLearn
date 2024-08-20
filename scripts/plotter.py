@@ -77,11 +77,10 @@ def main():
     parts, jets = process_particles(test)
     print('number of events',parts.shape[0])
     print("number of particles", parts.shape[1])
-    print('particles mean',np.mean(parts,(0,1)))
-    print('particles std',np.std(parts,(0,1)))
-    
-    print('jets mean',np.mean(jets,0))
-    print('jets std',np.std(jets,0))
+    # print('particles mean',np.mean(parts,(0,1)))
+    # print('particles std',np.std(parts,(0,1)))
+    # print('jets mean',np.mean(jets,0))
+    # print('jets std',np.std(jets,0))
     for feat in range(len(test.jet_names)):
         flat = jets[:, feat]
         fig, gs, _ = plot_utils.HistRoutine({'{}'.format(flags.dataset): flat}, test.jet_names[feat], 'Normalized Events', plot_ratio=False, reference_name='{}'.format(flags.dataset))

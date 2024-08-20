@@ -1,4 +1,4 @@
-import numpy as np
+import numpy as np, sys
 import tensorflow as tf
 from tensorflow import keras
 import tensorflow.keras.backend as K
@@ -12,9 +12,21 @@ import pickle
 
 def weighted_binary_crossentropy(y_true, y_pred):
     """Custom loss function with weighted binary cross-entropy."""
+
     weights = tf.cast(tf.gather(y_true, [1], axis=1), tf.float32)  # Event weights
     y_true = tf.cast(tf.gather(y_true, [0], axis=1), tf.float32)  # Actual labels
-
+    # weights = tf.cast(tf.gather(y_true, [2], axis=1), tf.float32)  # Event weights
+    # y_true_labels = tf.cast(tf.gather(y_true, [0, 1], axis=1), tf.float32)  # Actual labels
+    # tf.print("w : ", weights, 
+    #     "Weights - Mean:", tf.reduce_mean(weights), 
+    #          "Min:", tf.reduce_min(weights), 
+    #          "Max:", tf.reduce_max(weights))
+    # tf.print("w : ", y_true, 
+    #          "Weights - Mean:", tf.reduce_mean(y_true), 
+    #          "Min:", tf.reduce_min(y_true), 
+    #          "Max:", tf.reduce_max(y_true))
+    # weights = tf.math.log1p(weights+1)
+    
     # Compute loss using TensorFlow's built-in function to handle numerical stability
     loss = weights * tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=y_pred)
     return tf.reduce_mean(loss)
@@ -243,10 +255,10 @@ class Classifier(keras.Model):
                  num_feat,
                  num_jet,      
                  num_classes=2,
-                 num_drop = 7, 
-                 feature_drop = 0.2,
+                 num_keep = 7, 
+                 feature_drop = 0.1,
                  projection_dim = 128,
-                 local = True, K = 10,
+                 local = True, K = 5,
                  num_local = 2, 
                  num_layers = 8, num_class_layers=2,
                  num_heads = 4,drop_probability = 0.0,
@@ -309,8 +321,8 @@ class Classifier(keras.Model):
         with tf.GradientTape(persistent=True) as tape:
             y_pred,y_evt = self.model(x)
             loss_pred = weighted_binary_crossentropy(y, y_pred)
-            loss_evt = mse(x['input_jet'],y_evt)
-            loss = loss_pred+loss_evt
+            # loss_evt = mse(x['input_jet'],y_evt)
+            loss = loss_pred
 
 
         self.body_optimizer.minimize(loss_pred,self.body.trainable_variables,tape=tape)
@@ -326,9 +338,9 @@ class Classifier(keras.Model):
         x['input_time'] = tf.zeros((batch_size,1))
 
         y_pred,y_evt = self.model(x)
-        loss_evt = mse(x['input_jet'],y_evt)
+        # loss_evt = mse(x['input_jet'],y_evt)
         loss_pred = weighted_binary_crossentropy(y, y_pred)
-        loss = loss_pred+loss_evt
+        loss = loss_pred
         self.loss_tracker.update_state(loss_pred)
         return {"loss": self.loss_tracker.result()}
 

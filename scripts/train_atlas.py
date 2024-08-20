@@ -13,9 +13,6 @@ import pickle
 import utils
 from omnifold import Classifier
 
-# Initialize Horovod
-hvd.init()
-
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -39,11 +36,15 @@ def parse_arguments():
     parser.add_argument("--simple", action='store_true', default=False, help='Use simplified head model')
     parser.add_argument("--talking_head", action='store_true', default=False, help='Use talking head attention')
     parser.add_argument("--layer_scale", action='store_true', default=False, help='Use layer scale in the residual connections')
+    parser.add_argument("--wd", type=float, default=1e-4, help="weight decay")
+
     return parser.parse_args()
 
 def get_data_loader(flags):
-    train = utils.AtlasDataLoader(os.path.join(flags.folder, 'ATLASTOP', 'train_atlas.h5'), flags.batch, hvd.rank(), hvd.size(), is_small='small' in flags.dataset)
-    val = utils.AtlasDataLoader(os.path.join(flags.folder, 'ATLASTOP', 'val_atlas.h5'), flags.batch, hvd.rank(), hvd.size(), is_small='small' in flags.dataset)
+    #train = utils.AtlasDataLoader(os.path.join(flags.folder, 'ATLASTOP', 'train_atlas.h5'), flags.batch, hvd.rank(), hvd.size(), is_small='small' in flags.dataset)
+    #val = utils.AtlasDataLoader(os.path.join(flags.folder, 'ATLASTOP', 'val_atlas.h5'), flags.batch, hvd.rank(), hvd.size(), is_small='small' in flags.dataset)
+    train = utils.TauDataLoader(os.path.join(flags.folder,'TAU', 'train_tau.h5'),flags.batch,hvd.rank(),hvd.size())
+    val = utils.TauDataLoader(os.path.join(flags.folder,'TAU', 'val_tau.h5'),flags.batch,hvd.rank(),hvd.size())
     return train, val
 
 def configure_optimizers(flags, train_loader, lr_factor=1.0):
@@ -56,7 +57,7 @@ def configure_optimizers(flags, train_loader, lr_factor=1.0):
     )
     optimizer = keras.optimizers.Lion(
         learning_rate=lr_schedule,
-        weight_decay=1e-4*lr_factor,
+        weight_decay=flags.wd*lr_factor,
         beta_1=0.95,
         beta_2=0.99)
     return hvd.DistributedOptimizer(optimizer)
@@ -86,7 +87,7 @@ def main():
                        mode=flags.mode,class_activation= None,
                        fine_tune = flags.fine_tune,
                        model_name = model_path,
-)
+    )
 
 
 
@@ -98,7 +99,7 @@ def main():
         hvd.callbacks.BroadcastGlobalVariablesCallback(0),
         hvd.callbacks.MetricAverageCallback(),
         keras.callbacks.EarlyStopping(patience=flags.stop_epoch, restore_best_weights=True),
-        keras.callbacks.ReduceLROnPlateau(monitor='val_loss', patience=1000, min_lr=1e-6)
+        keras.callbacks.ReduceLROnPlateau(monitor='val_loss', patience=200, min_lr=1e-6)
     ]
 
     if hvd.rank() == 0:

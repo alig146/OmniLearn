@@ -118,8 +118,8 @@ colors = {
 name_translate = {
     'top_fine_tune':'Top tagging OmniLearn',
     'top':'Top tagging',
-    'tau_fine_tune':'Tau tagging OmniLearn',
-    'tau':'Tau tagging',
+    'tau_fine_tune':'Di-Tau tagging Fine-tuned',
+    'tau':'Di-Tau tagging Scratch',
 
     'eic_fine_tune':'EIC Pythia OmniLearn',
     'eic':'EIC Pythia',

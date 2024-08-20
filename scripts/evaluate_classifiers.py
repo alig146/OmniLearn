@@ -5,6 +5,7 @@ from tensorflow import keras
 from sklearn import metrics
 import horovod.tensorflow.keras as hvd
 import argparse
+import tf2onnx
 import sys
 import gc
 
@@ -15,7 +16,7 @@ from omnifold import Classifier
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Evaluate performance metrics for trained models on various datasets.")
     parser.add_argument("--dataset", type=str, default="top", help="Folder containing input files")
-    parser.add_argument("--folder", type=str, default="/pscratch/sd/v/vmikuni/PET/", help="Folder containing input files")
+    parser.add_argument("--folder", type=str, default="tau/", help="Folder containing input files")
     parser.add_argument("--batch", type=int, default=5000, help="Batch size")
     parser.add_argument("--load", action='store_true', help="Load pre-evaluated npy files")
     parser.add_argument("--mode", type=str, default="classifier", help="Loss type to train the model")
@@ -87,6 +88,10 @@ def get_data_info(flags):
         threshold = [0.3,0.5]
         folder_name = 'TAU'
 
+        # threshold = [0.5,0.8]
+        # folder_name = 'TAU'
+        # multi_label = False
+
     elif flags.dataset == 'atlas':
         test = utils.AtlasDataLoader(os.path.join(flags.folder,'ATLASTOP', 'test_atlas.h5'),
                                      flags.batch,rank = hvd.rank(),size = hvd.size())
@@ -121,6 +126,7 @@ def get_data_info(flags):
     return test,multi_label,threshold,folder_name
 
 def get_model_function(dataset):
+    # if 'atlas' in dataset or 'tau' in dataset:
     if 'atlas' in dataset:
         return Classifier, 'sigmoid'
     else:
@@ -131,6 +137,8 @@ def load_or_evaluate_model(flags, test,folder_name):
         utils.get_model_name(
             flags,fine_tune=flags.fine_tune,
             add_string = '_{}'.format(flags.nid) if flags.nid > 0 else '').replace('.h5','.npy')))
+    
+
     
     if flags.load:
         print("Loading saved npy files")
@@ -145,27 +153,73 @@ def load_or_evaluate_model(flags, test,folder_name):
                                simple=flags.simple, layer_scale=flags.layer_scale,
                                talking_head=flags.talking_head,
                                mode=flags.mode, class_activation=activation)
+    
         
-
-        
-        X, y = test.make_eval_data()
+        X, y, event_id = test.make_eval_data()
         if flags.nid>0:
             #Load alternative runs
             add_string = '_{}'.format(flags.nid)
         else:
             add_string = ''
 
+
         model.load_weights(os.path.join(
             flags.folder,'checkpoints',
             utils.get_model_name(flags,fine_tune=flags.fine_tune,add_string=add_string)))
-        
+                
         y = hvd.allgather(tf.constant(y)).numpy()
-        print("AAAAA: ", y)
         pred = hvd.allgather(tf.constant(model.predict(X, verbose=hvd.rank() == 0)[0])).numpy()
         if hvd.rank()==0:
             if not os.path.exists(os.path.join(flags.folder,folder_name,'npy')):
                 os.makedirs(os.path.join(flags.folder,folder_name,'npy'))
-            np.save(npy_file,{'y':y,'pred':pred})
+            np.save(npy_file,{'y':y,'pred':pred,'event_id':event_id})
+
+
+
+        # Save the trained model to ONNX format
+        # print("Shape of X:")
+        # for batch in X.take(1):
+        #     for name, tensor in batch.items():
+        #         print(f"{name}: {tensor.shape}")
+
+        output_onnx_path = os.path.join(flags.folder, folder_name, "model.onnx")
+        # Get a sample input
+        for batch in X.take(1):
+            inputs = batch  # This is a dictionary of input tensors
+            break
+        # Create input signature with dynamic batch size
+        input_signature = []
+        for name, tensor in inputs.items():
+            shape = tensor.shape.as_list()
+            shape[0] = None  # Set batch dimension to None (dynamic)
+            input_signature.append(tf.TensorSpec(shape=shape, dtype=tensor.dtype, name=name))
+        # Convert to ONNX
+        onnx_model, _ = tf2onnx.convert.from_keras(model, input_signature=input_signature)
+        # Explicitly set dynamic axes for inputs and outputs
+        for input in onnx_model.graph.input:
+            input.type.tensor_type.shape.dim[0].dim_param = "batch"
+        for output in onnx_model.graph.output:
+            output.type.tensor_type.shape.dim[0].dim_param = "batch"
+        # Save the model
+        with open(output_onnx_path, "wb") as f:
+            f.write(onnx_model.SerializeToString())
+        print(f"ONNX model saved to {output_onnx_path}")
+        # Print input and output names
+        input_names = [input.name for input in onnx_model.graph.input]
+        output_names = [output.name for output in onnx_model.graph.output]
+        print("Input tensor names:", input_names)
+        print("Output tensor names:", output_names)
+
+        # Print shapes of all inputs and outputs
+        print("Input tensor shapes:")
+        for input in onnx_model.graph.input:
+            shape = [dim.dim_value if dim.dim_value != 0 else 'dynamic' for dim in input.type.tensor_type.shape.dim]
+            print(f"{input.name}: {shape}")
+
+        print("Output tensor shapes:")
+        for output in onnx_model.graph.output:
+            shape = [dim.dim_value if dim.dim_value != 0 else 'dynamic' for dim in output.type.tensor_type.shape.dim]
+            print(f"{output.name}: {shape}")
 
         
         return y, pred
@@ -176,7 +230,7 @@ def main():
 
     test,multi_label,thresholds,folder_name = get_data_info(flags)
 
-    y, pred = load_or_evaluate_model(flags, test,folder_name)
+    y, pred = load_or_evaluate_model(flags, test,folder_name) 
 
     # Evaluate results
     print_metrics(pred, y, thresholds, multi_label=multi_label)

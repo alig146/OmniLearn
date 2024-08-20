@@ -12,10 +12,10 @@ class PET(keras.Model):
                  num_feat,
                  num_jet,      
                  num_classes=2,
-                 num_keep = 9, #Number of features that wont be dropped
+                 num_keep = 7, #Number of features that wont be dropped # was 9
                  feature_drop = 0.1,
                  projection_dim = 128,
-                 local = True, K = 5,
+                 local = True, K = 5, ##was 5
                  num_local = 2, 
                  num_layers = 8, num_class_layers=2,
                  num_gen_layers = 2,
@@ -497,13 +497,11 @@ def get_neighbors(points,features,projection_dim,K):
     
     return local
 
-
 def pairwise_distance(point_cloud):
     r = tf.reduce_sum(point_cloud * point_cloud, axis=2, keepdims=True)
     m = tf.matmul(point_cloud, point_cloud, transpose_b = True)
     D = r - 2 * m + tf.transpose(r, perm=(0, 2, 1)) + 1e-5
     return D
-
 
 def knn(num_points, k, topk_indices, features):
     # topk_indices: (N, P, K)
@@ -514,7 +512,6 @@ def knn(num_points, k, topk_indices, features):
     batch_indices = tf.tile(batch_indices, (1, num_points, k))
     indices = tf.stack([batch_indices, topk_indices], axis=-1)
     return tf.gather_nd(features, indices)
-
 
 def get_encoding(x,projection_dim,use_bias=True):
     x = layers.Dense(2*projection_dim,use_bias=use_bias,activation='gelu')(x)

@@ -81,7 +81,8 @@ class DataLoader:
             data_chunk = file['data'][:]
             mask_chunk = data_chunk[:, :, 2] != 0
             
-            jet_chunk = file['jet'][:]
+            jet_chunk = file['jet'][:, 1:] ### was file['jet'][:]       
+
             label_chunk = file['pid'][:]
 
             if preprocess:
@@ -99,15 +100,35 @@ class DataLoader:
         X = self.pad(X,num_pad=self.num_pad)
         # jet = self.preprocess_jet(self.jet).astype(np.float32)
         jet = self.jet.astype(np.float32)
+        time = np.zeros((self.jet.shape[0], 1), dtype=np.float32)
 
         tf_zip = tf.data.Dataset.from_tensor_slices(
             {'input_features':X,
              'input_points':X[:,:,:2],
              'input_mask':self.mask.astype(np.float32),
              'input_jet':jet,
-             'input_time':np.zeros((self.jet.shape[0],1)),})
+             'input_time':time,})
                         
-        return tf_zip.cache().batch(self.batch_size).prefetch(tf.data.AUTOTUNE), self.y
+        return tf_zip.cache().batch(self.batch_size).prefetch(tf.data.AUTOTUNE), self.y, self.event_id
+
+    # def make_tfdata(self): #same as below but modified to include weights 
+    #     # X = self.preprocess(self.X,self.mask).astype(np.float32)
+    #     X = self.X.astype(np.float32)
+    #     X = self.pad(X,num_pad=self.num_pad)
+    #     # jet = self.preprocess_jet(self.jet).astype(np.float32)
+    #     jet = self.jet.astype(np.float32)
+    #     tf_zip = tf.data.Dataset.from_tensor_slices(
+    #         {'input_features':X,
+    #          'input_points':X[:,:,:2],
+    #          'input_mask':self.mask.astype(np.float32),
+    #          'input_jet':jet})
+
+    #     tf_y = tf.data.Dataset.from_tensor_slices(np.stack([self.y,self.w],-1))
+
+    #     del self.X, self.y,  self.mask
+    #     gc.collect()
+        
+    #     return tf.data.Dataset.zip((tf_zip,tf_y)).cache().shuffle(self.batch_size*100).batch(self.batch_size).prefetch(tf.data.AUTOTUNE)
 
     def make_tfdata(self):
         # X = self.preprocess(self.X,self.mask).astype(np.float32)
@@ -115,14 +136,11 @@ class DataLoader:
         X = self.pad(X,num_pad=self.num_pad)
         # jet = self.preprocess_jet(self.jet).astype(np.float32)
         jet = self.jet.astype(np.float32)
-
         tf_zip = tf.data.Dataset.from_tensor_slices(
             {'input_features':X,
              'input_points':X[:,:,:2],
              'input_mask':self.mask.astype(np.float32),
              'input_jet':jet})
-        
-
         tf_y = tf.data.Dataset.from_tensor_slices(self.y)
         del self.X, self.y,  self.mask
         gc.collect()
@@ -131,12 +149,14 @@ class DataLoader:
 
     def load_data(self,path, batch_size=512,rank=0,size=1,nevts=None):
         # self.path = path
-
         self.X = h5.File(self.path,'r')['data'][rank:nevts:size]
         self.y = h5.File(self.path,'r')['pid'][rank:nevts:size]
         self.jet = h5.File(self.path,'r')['jet'][rank:nevts:size]
+        # self.w = h5.File(self.path,'r')['weights'][rank:nevts:size]
+        # self.w = np.ones_like(self.y)
+        self.event_id = self.jet[:, :1]
+        self.jet = self.jet[:, 1:] #remove the first var in jet (event_id)
         self.mask = self.X[:,:,2]!=0
-
         # self.batch_size = batch_size
         self.nevts = h5.File(self.path,'r')['data'].shape[0] if nevts is None else nevts
         self.num_part = self.X.shape[1]
@@ -518,11 +538,13 @@ class TauDataLoader(DataLoader):
         #     'numberOfSCTHoles', 'numberOfSCTHits', 'qOverP', 'd0TJVA', 'z0TJVA', 'charge']
 
 
-        self.jet_names = ['ditau_ditau_pt',
-                'ditau_eta',
-                'ditau_phi',
-                'ditau_n_tracks_lead',
-                'ditau_n_tracks_subl',
+        self.jet_names = [
+                # 'ditau_ditau_pt',
+                # 'ditau_eta',
+                # 'ditau_phi',
+                # 'ditau_n_tracks_lead',
+                # 'ditau_n_tracks_subl',
+                # 'event_id',
                 'ditau_R_max_lead',
                 'ditau_R_max_subl',
                 'ditau_R_tracks_subl',
@@ -537,46 +559,33 @@ class TauDataLoader(DataLoader):
                 'ditau_m_core_lead',
                 'ditau_m_core_subl',
                 'ditau_m_tracks_lead',
-                'ditau_m_tracks_subl',
+                # 'ditau_m_tracks_subl',
                 'ditau_n_track']
 
-        self.part_names = ['trackDeltaEta', 'trackDeltaPhi', 'log(trackPt)', 'd0TJVA', 'z0TJVA', 'dR', 'numberOfInnermostPixelLayerHits', 'numberOfPixelHits', 'numberOfSCTHits', 'charge']
+
+        # self.part_names = ['trackDeltaEta', 'trackDeltaPhi', 'log(trackPt)', 'd0TJVA', 'dR', 'z0TJVA', 'numberOfInnermostPixelLayerHits', 'numberOfPixelHits', 'numberOfSCTHits', 'charge']
+        self.part_names = ['trackDeltaEta', 
+                           'trackDeltaPhi', 
+                           'log(trackPt)',
+                           'd0TJVA', 
+                           'pt_ratio', 
+                           'z0TJVA', 
+                           'dR', 
+                           'numberOfInnermostPixelLayerHits', 
+                           'numberOfPixelHits', 
+                           'numberOfSCTHits', 
+                           'charge']
 
         self.load_data(path, batch_size,rank,size)
         self.num_pad = 0
         self.num_feat = self.X.shape[2] + self.num_pad #missing inputs
-        self.y = np.identity(2)[self.y.astype(np.int32)]
+        self.y = np.identity(2)[self.y.astype(np.int32)] #one-hot encoding, not used when including weights?
+        self.num_classes = self.y.shape[1] # use when one-hot encoding
+        # self.num_classes = 1
 
-
-        # print("YYYYYYY: ", self.y.shape)
-        # self.y = np.zeros((self.X.shape[0],1))
-        self.num_classes = self.y.shape[1]
         self.steps_per_epoch = None #will pass none, otherwise needs to add repeat to tf data
         self.files = [path]
 
-# class TauDataLoader(DataLoader):    
-#     def __init__(self, path, batch_size=512,rank=0,size=1,nevts=None):
-#         super().__init__(path, batch_size, rank, size)
-
-#         self.mean_part = [ 0.0, 0.0, -4.68198519e-02,  2.20178221e-01,
-#                                 -7.48168704e-02,  2.56480441e-01,  0.0,
-#                                 0.0, 0.0,  0.0,  0.0,  0.0, 0.0]
-#         self.std_part =  [0.03927566, 0.04606768, 0.25982114,
-#                                0.82466037, 0.7541279,  0.86455974,1.0,
-#                                1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
-#         self.mean_jet = [6.16614813e+01, 2.05619964e-03, 3.52885518e+00, 4.28755680e+00]
-#         self.std_jet  = [34.22578952,  0.68952567,  4.54982729,  3.20547624]
-
-#         self.load_data(path, batch_size,rank,size,nevts = nevts)
-
-#         self.num_pad = 0
-#         self.num_feat = self.X.shape[2] + self.num_pad #missing inputs
-        
-#         self.num_classes = self.y.shape[1]
-#         self.steps_per_epoch = None #will pass none, otherwise needs to add repeat to tf data
-#         self.files = [path]
-
-        
 class AtlasDataLoader(DataLoader):    
     def __init__(self, path, batch_size=512,rank=0,size=1,is_small=False):
         super().__init__(path, batch_size, rank, size)
@@ -691,6 +700,7 @@ class OmniDataLoader(DataLoader):
 
 
     def data_from_file(self,file_path):
+        print("NOOOOOOOOO")
         with h5.File(file_path, 'r') as file:
             X = h5.File(file_path,'r')['reco'][:]
             reco = self.get_inputs(X,h5.File(file_path,'r')['reco_jets'][:])

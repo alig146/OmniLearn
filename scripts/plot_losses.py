@@ -51,6 +51,9 @@ def load_and_plot_history(flags):
     if flags.dataset == 'omnifold':
         baseline_file = f'{flags.folder}/histories/OmniFold_baseline_iter0_step1.pkl'
         ft_file = f'{flags.folder}/histories/OmniFold_fine_tune_iter0_step1.pkl'
+    elif flags.dataset == 'tau':
+        baseline_file = f'PET_tau_8_local_layer_scale_token_baseline_classifier_good_run2.pkl'
+        ft_file = f'PET_tau_8_local_layer_scale_token_fine_tune_classifier_good_run1.pkl'
             
     history_baseline = utils.load_pickle(flags.folder, baseline_file)
     history_ft = utils.load_pickle(flags.folder, ft_file)
