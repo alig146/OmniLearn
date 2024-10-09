@@ -5,31 +5,70 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.callbacks import EarlyStopping,ModelCheckpoint, ReduceLROnPlateau
 import os, gc
 import horovod.tensorflow.keras as hvd
-from tensorflow.keras.losses import mse
+from tensorflow.keras.losses import mse, categorical_crossentropy
 from scipy.special import expit
 from PET import PET
 import pickle
 
 def weighted_binary_crossentropy(y_true, y_pred):
     """Custom loss function with weighted binary cross-entropy."""
-
     weights = tf.cast(tf.gather(y_true, [1], axis=1), tf.float32)  # Event weights
     y_true = tf.cast(tf.gather(y_true, [0], axis=1), tf.float32)  # Actual labels
-    # weights = tf.cast(tf.gather(y_true, [2], axis=1), tf.float32)  # Event weights
-    # y_true_labels = tf.cast(tf.gather(y_true, [0, 1], axis=1), tf.float32)  # Actual labels
-    # tf.print("w : ", weights, 
-    #     "Weights - Mean:", tf.reduce_mean(weights), 
-    #          "Min:", tf.reduce_min(weights), 
-    #          "Max:", tf.reduce_max(weights))
-    # tf.print("w : ", y_true, 
-    #          "Weights - Mean:", tf.reduce_mean(y_true), 
-    #          "Min:", tf.reduce_min(y_true), 
-    #          "Max:", tf.reduce_max(y_true))
-    # weights = tf.math.log1p(weights+1)
+
+    weights = tf.cast(tf.gather(y_true, [0], axis=1), tf.float32)  # Event weights
+    y_true_one_hot = tf.cast(tf.gather(y_true, list(range(1, y_true.shape[1])), axis=1), tf.float32)  # One-hot encoded labels
+ 
     
+    # #Shift weights to be positive
+    # min_weight = tf.reduce_min(weights)
+    # weights = weights - min_weight + 1e-6  # small epsilon to avoid zero weights
+    # # normalize weights
+    # weights = weights / tf.reduce_mean(weights)
+    weights = tf.math.log1p(weights+1)
+
+
+    # # Calculate class weights for the current batch
+    # batch_size = tf.cast(tf.shape(y_true)[0], tf.float32)
+    # neg_samples = tf.reduce_sum(1.0 - y_true)
+    # pos_samples = tf.reduce_sum(y_true)
+    
+    # neg_weight = (batch_size / 2.0) / (neg_samples + 1e-6)
+    # pos_weight = (batch_size / 2.0) / (pos_samples + 1e-6)
+
+    # # Combine event weights with class weights
+    # class_weights = tf.where(tf.equal(y_true, 0), neg_weight, pos_weight)
+    # combined_weights = weights * class_weights
+
+    # # Normalize combined weights
+    # combined_weights = combined_weights / tf.reduce_mean(combined_weights)
+
+    tf.print("weigts : ", weights, 
+        "Weights - Mean:", tf.reduce_mean(weights), 
+             "Min:", tf.reduce_min(weights), 
+             "Max:", tf.reduce_max(weights))
+    tf.print("y_true : ", y_true, 
+             "Min:", tf.reduce_min(y_true), 
+             "Max:", tf.reduce_max(y_true))
+    tf.print("y_red : ", y_pred)
+
     # Compute loss using TensorFlow's built-in function to handle numerical stability
     loss = weights * tf.nn.sigmoid_cross_entropy_with_logits(labels=y_true, logits=y_pred)
+
+    # loss_n = weights * tf.nn.weighted_cross_entropy_with_logits(
+    #     labels=y_true,
+    #     logits=y_pred,
+    #     pos_weight=class_weights
+    # )
+    #print to comapre loos and loss_me
+    tf.print("loss: ", tf.reduce_mean(loss))
+    # tf.print("loss_n: ", loss_n)
+
+    #print sigmoid of y_pred to get probability
+    tf.print("sigmoid: ", tf.nn.sigmoid(y_pred))
+
     return tf.reduce_mean(loss)
+
+
 
 
 def convert_to_dict(x):    
@@ -319,28 +358,31 @@ class Classifier(keras.Model):
         batch_size = tf.shape(x['input_jet'])[0]
         x['input_time'] = tf.zeros((batch_size,1))
         with tf.GradientTape(persistent=True) as tape:
-            y_pred,y_evt = self.model(x)
+            # y_pred,y_evt = self.model(x)
+            body = self.body(x)
+            y_pred,y_mse = self.head([body,x['input_jet']])
             loss_pred = weighted_binary_crossentropy(y, y_pred)
             # loss_evt = mse(x['input_jet'],y_evt)
             loss = loss_pred
 
-
-        self.body_optimizer.minimize(loss_pred,self.body.trainable_variables,tape=tape)
+        self.body_optimizer.minimize(loss,self.body.trainable_variables,tape=tape)
         self.optimizer.minimize(loss,self.head.trainable_variables,tape=tape)
-
         
-        self.loss_tracker.update_state(loss_pred)
+        self.loss_tracker.update_state(loss)
         return {"loss": self.loss_tracker.result()}
 
     def test_step(self, inputs):
         x,y = inputs
         batch_size = tf.shape(x['input_jet'])[0]
         x['input_time'] = tf.zeros((batch_size,1))
-
-        y_pred,y_evt = self.model(x)
+        # y_pred,y_evt = self.model(x)
+        body = self.body(x)
+        y_pred,y_mse = self.head([body,x['input_jet']])
         # loss_evt = mse(x['input_jet'],y_evt)
         loss_pred = weighted_binary_crossentropy(y, y_pred)
-        loss = loss_pred
+        # loss = loss_pred
         self.loss_tracker.update_state(loss_pred)
         return {"loss": self.loss_tracker.result()}
+    
+    
 

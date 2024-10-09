@@ -77,6 +77,7 @@ def configure_optimizers(flags, train_loader, lr_factor=1.0):
         learning_rate=lr_schedule,
         weight_decay=flags.wd*lr_factor,
         beta_1=flags.b1,
+        # clipnorm=1.0, #####NNNNNNNEEEEEEWWWWWWWWWW
         beta_2=flags.b2)
     return hvd.DistributedOptimizer(optimizer)
 

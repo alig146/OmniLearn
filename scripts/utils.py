@@ -109,9 +109,10 @@ class DataLoader:
              'input_jet':jet,
              'input_time':time,})
                         
-        return tf_zip.cache().batch(self.batch_size).prefetch(tf.data.AUTOTUNE), self.y, self.event_id
+        return tf_zip.cache().batch(self.batch_size).prefetch(tf.data.AUTOTUNE), self.y, self.event_id, self.w
 
-    # def make_tfdata(self): #same as below but modified to include weights 
+    #####same as below but modified to include weights 
+    # def make_tfdata(self): 
     #     # X = self.preprocess(self.X,self.mask).astype(np.float32)
     #     X = self.X.astype(np.float32)
     #     X = self.pad(X,num_pad=self.num_pad)
@@ -123,7 +124,7 @@ class DataLoader:
     #          'input_mask':self.mask.astype(np.float32),
     #          'input_jet':jet})
 
-    #     tf_y = tf.data.Dataset.from_tensor_slices(np.stack([self.y,self.w],-1))
+    #     tf_y = tf.data.Dataset.from_tensor_slices(np.stack([self.w,self.y],-1))
 
     #     del self.X, self.y,  self.mask
     #     gc.collect()
@@ -144,15 +145,17 @@ class DataLoader:
         tf_y = tf.data.Dataset.from_tensor_slices(self.y)
         del self.X, self.y,  self.mask
         gc.collect()
+
+        tf_weights = tf.data.Dataset.from_tensor_slices(self.w.astype(np.float32))
         
-        return tf.data.Dataset.zip((tf_zip,tf_y)).cache().shuffle(self.batch_size*100).batch(self.batch_size).prefetch(tf.data.AUTOTUNE)
+        return tf.data.Dataset.zip((tf_zip, tf_y, tf_weights)).cache().shuffle(self.batch_size*100).batch(self.batch_size).prefetch(tf.data.AUTOTUNE)
 
     def load_data(self,path, batch_size=512,rank=0,size=1,nevts=None):
         # self.path = path
         self.X = h5.File(self.path,'r')['data'][rank:nevts:size]
         self.y = h5.File(self.path,'r')['pid'][rank:nevts:size]
         self.jet = h5.File(self.path,'r')['jet'][rank:nevts:size]
-        # self.w = h5.File(self.path,'r')['weights'][rank:nevts:size]
+        self.w = h5.File(self.path,'r')['weights'][rank:nevts:size]
         # self.w = np.ones_like(self.y)
         self.event_id = self.jet[:, :1]
         self.jet = self.jet[:, 1:] #remove the first var in jet (event_id)
@@ -507,37 +510,6 @@ class TauDataLoader(DataLoader):
     def __init__(self, path, batch_size=512,rank=0,size=1):
         super().__init__(path, batch_size, rank, size)
 
-        # self.jet_names = ['ditau_ditau_pt',
-        #         'ditau_n_tracks_lead',
-        #         'ditau_n_tracks_subl',
-        #         'ditau_R_max_lead',
-        #         'ditau_R_max_subl',
-        #         'ditau_R_tracks_subl',
-        #         'ditau_R_isotrack',
-        #         'ditau_d0_leadtrack_lead',
-        #         'ditau_d0_leadtrack_subl',
-        #         'ditau_f_core_lead',
-        #         'ditau_f_core_subl',
-        #         'ditau_f_subjet_subl',
-        #         'ditau_f_subjets',
-        #         'ditau_f_isotracks',
-        #         'ditau_m_core_lead',
-        #         'ditau_m_core_subl',
-        #         'ditau_m_tracks_lead',
-        #         'ditau_m_tracks_subl',
-        #         'ditau_n_track',
-        #         'ditau_eta',
-        #         'lead_subjet_pt',
-        #         'sublead_subjet_pt']
-
-        # self.part_names = ['trackPt', 'trackEta', 'trackPhi', 
-        #     'numberOfInnermostPixelLayerHits', 'numberOfPixelHits', 'numberOfPixelSharedHits',
-        #     'numberOfPixelDeadSensors', 'numberOfSCTSharedHits', 'numberOfSCTDeadSensors',
-        #     'numberOfTRTHighThresholdHits', 'numberOfTRTHits', 'expectInnermostPixelLayerHit',
-        #     'expectNextToInnermostPixelLayerHit', 'numberOfContribPixelLayers', 'numberOfPixelHoles',
-        #     'numberOfSCTHoles', 'numberOfSCTHits', 'qOverP', 'd0TJVA', 'z0TJVA', 'charge']
-
-
         self.jet_names = [
                 # 'ditau_ditau_pt',
                 # 'ditau_eta',
@@ -585,6 +557,21 @@ class TauDataLoader(DataLoader):
 
         self.steps_per_epoch = None #will pass none, otherwise needs to add repeat to tf data
         self.files = [path]
+
+        #####for event level#####
+        # self.jet_names = ['met', 'met_centrality', 'met_sig', 'ditau_pt', 'collinear_mass', 'visible_ditau_m', 'x1', 'x2', 'bdt_score']
+
+        # self.part_names = ['delta_eta', 'delta_phi', 'subjet_pt', 'e_ratio', 'delta_R', 'subjet_charge', 'subjet_n_core_tracks']
+
+        # self.load_data(path, batch_size,rank,size)
+        # self.num_pad = 0
+        # self.num_feat = self.X.shape[2] + self.num_pad #missing inputs
+        # self.y = np.identity(2)[self.y.astype(np.int32)] #one-hot encoding, not used when including weights?
+        # self.num_classes = self.y.shape[1] # use when one-hot encoding
+        # # self.num_classes = 1
+
+        # self.steps_per_epoch = None #will pass none, otherwise needs to add repeat to tf data
+        # self.files = [path]
 
 class AtlasDataLoader(DataLoader):    
     def __init__(self, path, batch_size=512,rank=0,size=1,is_small=False):

@@ -1,0 +1,5 @@
+FROM docker.io/vmikuni/tensorflow:ngc-23.12-tf2-v1
+
+# Install tf2onnx package
+RUN pip install tf2onnx
+RUN pip install onnxruntime-gpu

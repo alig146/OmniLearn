@@ -6,16 +6,55 @@ from layers import StochasticDepth, TalkingHeadAttention, LayerScale, RandomDrop
 from tensorflow.keras.losses import mse, categorical_crossentropy
 
 
+# def weighted_crossentropy(y_true, y_pred, sample_weight):
+#     # sample_weight = tf.math.log1p(sample_weight+1)
+#     ##Shift weights to be positive
+#     min_weight = tf.reduce_min(sample_weight)
+#     sample_weight = sample_weight - min_weight + 1e-6  # small epsilon to avoid zero weights
+#     # # normalize weights
+#     sample_weight = sample_weight / tf.reduce_mean(sample_weight)
+#     ce = categorical_crossentropy(y_true, y_pred, from_logits=True)
+#     weighted_ce = ce * sample_weight
+#     return weighted_ce
+
+# def weighted_crossentropy(y_true, y_pred, sample_weight):
+#     epsilon=1e-12
+#     # Compute the categorical crossentropy
+#     ce = categorical_crossentropy(y_true, y_pred, from_logits=True)
+#     # Log-scale method
+#     log_weights = tf.math.log(sample_weight + epsilon)
+#     min_log_weight = tf.reduce_min(log_weights)
+#     scaled_weights = tf.exp(log_weights - min_log_weight)
+#     # Apply the scaled weights to the loss
+#     weighted_ce = ce * scaled_weights
+#     # Normalize by the sum of scaled weights to keep the overall loss scale consistent
+#     total_weight = tf.reduce_sum(scaled_weights)
+#     normalized_weighted_ce = tf.reduce_sum(weighted_ce) / total_weight
+    
+#     return normalized_weighted_ce
+
+
+def weighted_crossentropy(y_true, y_pred, sample_weight):
+    bg_to_sig_ratio=65.0
+    weights = tf.where(tf.equal(y_true[:, 1], 1), bg_to_sig_ratio, 1.0)
+    crossentropy = tf.keras.losses.categorical_crossentropy(y_true, y_pred, from_logits=True)
+    weighted_losses = crossentropy * weights
+    return tf.reduce_mean(weighted_losses)
+
+
+
 class PET(keras.Model):
     """Point-Edge Transformer"""
     def __init__(self,
                  num_feat,
                  num_jet,      
                  num_classes=2,
-                 num_keep = 7, #Number of features that wont be dropped # was 9
+                 num_keep = 9, #Number of features that wont be dropped # was 9 (last 7)
                  feature_drop = 0.1,
                  projection_dim = 128,
-                 local = True, K = 5, ##was 5
+                 local = True, 
+                 K = 5, ##was 5
+                #  K = 1, 
                  num_local = 2, 
                  num_layers = 8, num_class_layers=2,
                  num_gen_layers = 2,
@@ -134,7 +173,7 @@ class PET(keras.Model):
             return self.classifier(x)
 
     def train_step(self, inputs):
-        x,y = inputs
+        x,y, weights = inputs
         batch_size = tf.shape(x['input_jet'])[0]
         x['input_time'] = tf.zeros((batch_size,1))
         with tf.GradientTape(persistent=True) as tape:
@@ -144,7 +183,12 @@ class PET(keras.Model):
                             
             if self.mode == 'classifier' or 'all' in self.mode:
                 y_pred,y_mse = self.classifier_head([body,x['input_jet']])
-                loss_pred = categorical_crossentropy(y, y_pred,from_logits=True)
+                # tf.print("jjettt:", x['input_jet'])
+                # tf.print("traaa:", x['input_features'])
+                # tf.print("PPPPPP:", x['input_points'])
+                # tf.print("y_pred:", y_pred)
+                loss_pred = categorical_crossentropy(y, y_pred,from_logits=True)            
+                # loss_pred = weighted_crossentropy(y, y_pred, weights)
                 loss += loss_pred
                 if 'all' in self.mode:    
                     loss_mse = mse(x['input_jet'],y_mse)
@@ -231,7 +275,7 @@ class PET(keras.Model):
         return {m.name: m.result() for m in self.metrics}
     
     def test_step(self, inputs):
-        x,y = inputs
+        x,y, weights = inputs
         loss = 0.0
         batch_size = tf.shape(x['input_jet'])[0]
         x['input_time'] = tf.zeros((batch_size,1))
@@ -242,6 +286,7 @@ class PET(keras.Model):
         if self.mode == 'classifier' or 'all' in self.mode:
             y_pred,y_mse = self.classifier_head([body,x['input_jet']])
             loss_pred = categorical_crossentropy(y, y_pred,from_logits=True)
+            # loss_pred = weighted_crossentropy(y, y_pred, weights)
             loss += loss_pred
             if 'all' in self.mode:
                 loss_mse = mse(x['input_jet'],y_mse)

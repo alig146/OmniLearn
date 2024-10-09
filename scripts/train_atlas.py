@@ -82,9 +82,11 @@ def main():
                        local=flags.local,
                        num_layers=flags.num_layers,
                        drop_probability=flags.drop_probability,
-                       simple=flags.simple, layer_scale=flags.layer_scale,
+                    #    simple=flags.simple, 
+                       simple=False, 
+                       layer_scale=flags.layer_scale,
                        talking_head=flags.talking_head,
-                       mode=flags.mode,class_activation= None,
+                       mode=flags.mode,class_activation=None,
                        fine_tune = flags.fine_tune,
                        model_name = model_path,
     )

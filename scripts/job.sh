@@ -11,5 +11,5 @@
 #SBATCH --module=gpu,nccl-2.18
 
 export TF_CPP_MIN_LOG_LEVEL=2
-echo srun --mpi=pmi2 shifter python train.py --dataset tau --folder tau --lr 3e-5 --layer_scale --local --mode classifier --warm_epoch 3 --epoch 30 --stop_epoch 3 --batch 256 --fine_tune
-srun --mpi=pmi2 shifter python train.py --dataset tau --folder tau --lr 3e-5 --layer_scale --local --mode classifier --warm_epoch 3 --epoch 30 --stop_epoch 3 --batch 256 --fine_tune
+echo srun --mpi=pmi2 shifter python train.py --dataset tau --folder tau --lr 3e-5 --layer_scale --local --mode classifier --warm_epoch 3 --epoch 30 --stop_epoch 3 --batch 256
+srun --mpi=pmi2 shifter python train.py --dataset tau --folder tau --lr 3e-5 --layer_scale --local --mode classifier --warm_epoch 3 --epoch 30 --stop_epoch 3 --batch 256

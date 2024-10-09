@@ -1,0 +1,130 @@
+2024-09-18 04:48:24.693177: E tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:9360] Unable to register cuDNN factory: Attempting to register factory for plugin cuDNN when one has already been registered
+2024-09-18 04:48:24.693275: E tensorflow/compiler/xla/stream_executor/cuda/cuda_fft.cc:609] Unable to register cuFFT factory: Attempting to register factory for plugin cuFFT when one has already been registered
+2024-09-18 04:48:24.693319: E tensorflow/compiler/xla/stream_executor/cuda/cuda_blas.cc:1537] Unable to register cuBLAS factory: Attempting to register factory for plugin cuBLAS when one has already been registered
+2024-09-18 04:48:24.702014: I tensorflow/core/platform/cpu_feature_guard.cc:183] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE3 SSE4.1 SSE4.2 AVX, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2024-09-18 04:48:29.679227: I tensorflow/core/common_runtime/gpu/gpu_device.cc:1883] Created device /job:localhost/replica:0/task:0/device:GPU:0 with 37289 MB memory:  -> device: 0, name: NVIDIA A100-PCIE-40GB, pci bus id: 0000:c3:00.0, compute capability: 8.0
+WARNING:tensorflow:`period` argument is deprecated. Please use `save_freq` to specify the frequency in number of batches seen.
+WARNING:tensorflow:`period` argument is deprecated. Please use `save_freq` to specify the frequency in number of batches seen.
+/usr/local/lib/python3.10/dist-packages/keras/src/engine/functional.py:642: UserWarning: Input dict contained keys ['input_jet'] which did not match any model input. They will be ignored by the model.
+  inputs = self._flatten_to_reference_inputs(inputs)
+WARNING:tensorflow:Gradients do not exist for variables ['dense_31/kernel:0', 'dense_31/bias:0'] when minimizing the loss. If you're using `model.compile()`, did you forget to provide a `loss` argument?
+WARNING:tensorflow:Gradients do not exist for variables ['dense_31/kernel:0', 'dense_31/bias:0'] when minimizing the loss. If you're using `model.compile()`, did you forget to provide a `loss` argument?
+WARNING:tensorflow:Gradients do not exist for variables ['dense_31/kernel:0', 'dense_31/bias:0'] when minimizing the loss. If you're using `model.compile()`, did you forget to provide a `loss` argument?
+WARNING:tensorflow:Gradients do not exist for variables ['dense_31/kernel:0', 'dense_31/bias:0'] when minimizing the loss. If you're using `model.compile()`, did you forget to provide a `loss` argument?
+WARNING:tensorflow:Gradients do not exist for variables ['dense_31/kernel:0', 'dense_31/bias:0'] when minimizing the loss. If you're using `model.compile()`, did you forget to provide a `loss` argument?
+WARNING:tensorflow:Gradients do not exist for variables ['dense_31/kernel:0', 'dense_31/bias:0'] when minimizing the loss. If you're using `model.compile()`, did you forget to provide a `loss` argument?
+WARNING:tensorflow:Gradients do not exist for variables ['dense_31/kernel:0', 'dense_31/bias:0'] when minimizing the loss. If you're using `model.compile()`, did you forget to provide a `loss` argument?
+WARNING:tensorflow:Gradients do not exist for variables ['dense_31/kernel:0', 'dense_31/bias:0'] when minimizing the loss. If you're using `model.compile()`, did you forget to provide a `loss` argument?
+[1726634908.364127] [a150db5a54db:54807:0]            sock.c:502  UCX  WARN  unable to read somaxconn value from /proc/sys/net/core/somaxconn file
+jjettt: [[5.69991541 0.623620927 0.016063815 ... 0.964675307 1.08584142 0.806895912]
+ [111.51738 1.02821124 0.186015442 ... 0.848249197 0.849897802 0.269168973]
+ [50.7350082 0.59738934 0.130415231 ... 1.11725712 0.332707405 0.997114]
+ ...
+ [135.472702 0.957981586 0.350935638 ... 1.04811954 0.382529199 0.997076452]
+ [69.9118958 -0.412871271 0.0961443782 ... 1.15316451 0.159985363 0.871643722]
+ [56.9747925 -0.309257686 0.130363598 ... 1.82686651 0.137742445 0.00882902555]]
+traaa: [[[-0.0285584927 -0.0926494598 206.234863 ... 0.0969510674 -1 1]
+  [0.607791543 0.548584223 32.5842857 ... 0.818752229 1 1]
+  [0 0 0 ... 0 0 0]
+  [0 0 0 ... 0 0 0]]
+
+ [[-0.0322737694 -0.0140115023 608.746582 ... 0.035184063 -1 1]
+  [-0.173940659 0.570798278 17.6556759 ... 0.596712708 -1 3]
+  [0 0 0 ... 0 0 0]
+  [0 0 0 ... 0 0 0]]
+
+ [[-0.0951398611 0.0563514233 243.497025 ... 0.110576108 1 1]
+  [0.294726968 -0.522434235 34.9833794 ... 0.599834561 -1 1]
+  [0 0 0 ... 0 0 0]
+  [0 0 0 ... 0 0 0]]
+
+ ...
+
+ [[0.245711803 0.132833481 126.437355 ... 0.279318869 -1 1]
+  [-0.197521925 -0.234614134 87.272789 ... 0.306689918 1 1]
+  [0 0 0 ... 0 0 0]
+  [0 0 0 ... 0 0 0]]
+
+ [[0.0017285347 -0.00303393602 1006.74896 ... 0.00349179027 -1 1]
+  [-0.805024087 0.318614 13.5557642 ... 0.865782142 1 1]
+  [0 0 0 ... 0 0 0]
+  [0 0 0 ... 0 0 0]]
+
+ [[0.00225162506 -0.00761339068 335.272125 ... 0.00793936569 -1 3]
+  [-0.21735692 -0.111998275 15.3653946 ... 0.244515121 1 1]
+  [0 0 0 ... 0 0 0]
+  [0 0 0 ... 0 0 0]]]
+PPPPPP: [[[-0.0285584927 -0.0926494598]
+  [0.607791543 0.548584223]
+  [0 0]
+  [0 0]]
+
+ [[-0.0322737694 -0.0140115023]
+  [-0.173940659 0.570798278]
+  [0 0]
+  [0 0]]
+
+ [[-0.0951398611 0.0563514233]
+  [0.294726968 -0.522434235]
+  [0 0]
+  [0 0]]
+
+ ...
+
+ [[0.245711803 0.132833481]
+  [-0.197521925 -0.234614134]
+  [0 0]
+  [0 0]]
+
+ [[0.0017285347 -0.00303393602]
+  [-0.805024087 0.318614]
+  [0 0]
+  [0 0]]
+
+ [[0.00225162506 -0.00761339068]
+  [-0.21735692 -0.111998275]
+  [0 0]
+  [0 0]]]
+y_pred: [[0.00057394203 0.000149691303]
+ [0.000449851941 0.000284746086]
+ [0.000679439 6.58352219e-05]
+ ...
+ [0.000727311475 7.26330909e-05]
+ [0.000471779931 0.000254725921]
+ [0.000549911871 0.000272945559]]
+loss_pred:  [0.692935109 0.69306469 0.692840397 ... 0.692819893 0.693038702 0.693008721]
+2024-09-18 04:49:05.176073: I tensorflow/compiler/xla/service/service.cc:168] XLA service 0x7f31e8573530 initialized for platform CUDA (this does not guarantee that XLA will be used). Devices:
+2024-09-18 04:49:05.176109: I tensorflow/compiler/xla/service/service.cc:176]   StreamExecutor device (0): NVIDIA A100-PCIE-40GB, Compute Capability 8.0
+2024-09-18 04:49:05.181365: I tensorflow/compiler/mlir/tensorflow/utils/dump_mlir_util.cc:269] disabling MLIR crash reproducer, set env var `MLIR_CRASH_REPRODUCER_DIRECTORY` to enable.
+2024-09-18 04:49:05.201326: I tensorflow/compiler/xla/stream_executor/cuda/cuda_dnn.cc:442] Loaded cuDNN version 8907
+2024-09-18 04:49:05.303360: I ./tensorflow/compiler/jit/device_compiler.h:186] Compiled cluster using XLA!  This line is logged at most once for the lifetime of the process.
+Traceback (most recent call last):
+  File "/workspace/train.py", line 169, in <module>
+    main()
+  File "/workspace/train.py", line 154, in main
+    hist =  model.fit(train_loader.make_tfdata(),
+  File "/usr/local/lib/python3.10/dist-packages/keras/src/utils/traceback_utils.py", line 65, in error_handler
+    return fn(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/keras/src/engine/training.py", line 1783, in fit
+    tmp_logs = self.train_function(iterator)
+  File "/usr/local/lib/python3.10/dist-packages/tensorflow/python/util/traceback_utils.py", line 150, in error_handler
+    return fn(*args, **kwargs)
+  File "/usr/local/lib/python3.10/dist-packages/tensorflow/python/eager/polymorphic_function/polymorphic_function.py", line 831, in __call__
+    result = self._call(*args, **kwds)
+  File "/usr/local/lib/python3.10/dist-packages/tensorflow/python/eager/polymorphic_function/polymorphic_function.py", line 904, in _call
+    return tracing_compilation.call_function(
+  File "/usr/local/lib/python3.10/dist-packages/tensorflow/python/eager/polymorphic_function/tracing_compilation.py", line 139, in call_function
+    return function._call_flat(  # pylint: disable=protected-access
+  File "/usr/local/lib/python3.10/dist-packages/tensorflow/python/eager/polymorphic_function/concrete_function.py", line 1264, in _call_flat
+    return self._inference_function.flat_call(args)
+  File "/usr/local/lib/python3.10/dist-packages/tensorflow/python/eager/polymorphic_function/atomic_function.py", line 217, in flat_call
+    flat_outputs = self(*args)
+  File "/usr/local/lib/python3.10/dist-packages/tensorflow/python/eager/polymorphic_function/atomic_function.py", line 252, in __call__
+    outputs = self._bound_context.call_function(
+  File "/usr/local/lib/python3.10/dist-packages/tensorflow/python/eager/context.py", line 1479, in call_function
+    outputs = execute.execute(
+  File "/usr/local/lib/python3.10/dist-packages/tensorflow/python/eager/execute.py", line 60, in quick_execute
+    tensors = pywrap_tfe.TFE_Py_Execute(ctx._handle, device_name, op_name,
+KeyboardInterrupt
+2024-09-18 04:49:22.409711: W tensorflow/core/kernels/data/cache_dataset_ops.cc:854] The calling iterator did not fully read the dataset being cached. In order to avoid unexpected truncation of the dataset, the partially cached contents of the dataset  will be discarded. This can happen if you have an input pipeline similar to `dataset.cache().take(k).repeat()`. You should use `dataset.take(k).cache().repeat()` instead.

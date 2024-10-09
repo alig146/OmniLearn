@@ -1,0 +1,6 @@
+BootStrap: docker
+From: docker.io/vmikuni/tensorflow:ngc-23.12-tf2-v1
+
+%post
+    pip install tf2onnx
+    pip install onnxruntime-gpu

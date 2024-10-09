@@ -6,6 +6,7 @@ from sklearn import metrics
 import horovod.tensorflow.keras as hvd
 import argparse
 import tf2onnx
+import onnxruntime as ort
 import sys
 import gc
 
@@ -33,6 +34,7 @@ def parse_arguments():
 
 def print_metrics(y_pred, y, thresholds, multi_label=False):
     if multi_label:
+        print("using multi-label metrics")
         print("AUC: {}".format(metrics.roc_auc_score(y, y_pred,average='macro',multi_class='ovo')))
         
         one_hot_predictions = np.zeros_like(y_pred)
@@ -155,7 +157,7 @@ def load_or_evaluate_model(flags, test,folder_name):
                                mode=flags.mode, class_activation=activation)
     
         
-        X, y, event_id = test.make_eval_data()
+        X, y, event_id, weight = test.make_eval_data()
         if flags.nid>0:
             #Load alternative runs
             add_string = '_{}'.format(flags.nid)
@@ -172,11 +174,11 @@ def load_or_evaluate_model(flags, test,folder_name):
         if hvd.rank()==0:
             if not os.path.exists(os.path.join(flags.folder,folder_name,'npy')):
                 os.makedirs(os.path.join(flags.folder,folder_name,'npy'))
-            np.save(npy_file,{'y':y,'pred':pred,'event_id':event_id})
+            np.save(npy_file,{'y':y,'pred':pred,'event_id':event_id, 'weight':weight})
 
 
 
-        # Save the trained model to ONNX format
+        ############# Save the trained model to ONNX format #############
         # print("Shape of X:")
         # for batch in X.take(1):
         #     for name, tensor in batch.items():
@@ -203,6 +205,7 @@ def load_or_evaluate_model(flags, test,folder_name):
         # Save the model
         with open(output_onnx_path, "wb") as f:
             f.write(onnx_model.SerializeToString())
+
         print(f"ONNX model saved to {output_onnx_path}")
         # Print input and output names
         input_names = [input.name for input in onnx_model.graph.input]
@@ -219,7 +222,43 @@ def load_or_evaluate_model(flags, test,folder_name):
         print("Output tensor shapes:")
         for output in onnx_model.graph.output:
             shape = [dim.dim_value if dim.dim_value != 0 else 'dynamic' for dim in output.type.tensor_type.shape.dim]
-            print(f"{output.name}: {shape}")
+        print(f"{output.name}: {shape}")
+        #################################################################
+
+
+        # # Load the ONNX model
+        # onnx_model_path = os.path.join(flags.folder, folder_name, "model.onnx")
+        # session = ort.InferenceSession(onnx_model_path)
+
+        # # Get input and output names
+        # # input_names = [input.name for input in session.get_inputs()]
+        # # output_names = [output.name for output in session.get_outputs()]
+
+        # # Prepare a few sample inputs for inference
+        # # Assuming `X` is your dataset and you want to take a few samples
+        # sample_inputs = []
+        # for batch in X.take(5):  # Take 5 samples
+        #     sample_inputs.append(batch)
+
+        # # Perform inference
+        # for i, inputs in enumerate(sample_inputs):
+        #     # Convert inputs to a dictionary with input names as keys
+        #     input_feed = {name: inputs[name].numpy() for name in input_names}
+        
+        # # Run inference
+        # outputs = session.run(output_names, input_feed)
+        
+        # # Print the outputs
+        # print(f"Inference results for sample {i + 1}:")
+        # for name, output in zip(output_names, outputs):
+        #     print(f"{name}: {output}")
+        #     #check if there are any nana or inft vlaues in the output
+        #     print(f"Number of nan values in output: {np.sum(np.isnan(output))}")
+        #     print(f"Number of inf values in output: {np.sum(np.isinf(output))}")
+        #     print(f"Number of -inf values in output: {np.sum(np.isneginf(output))}")
+        #     print(f"Number of +inf values in output: {np.sum(np.isposinf(output))}")
+        #     print(f"Number of zeros in output: {np.sum(output == 0)}")
+        #     print(f"Number of non-zero values in output: {np.sum(output != 0)}")
 
         
         return y, pred
