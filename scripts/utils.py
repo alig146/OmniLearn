@@ -159,6 +159,12 @@ class DataLoader:
         # self.w = np.ones_like(self.y)
         self.event_id = self.jet[:, :1]
         self.jet = self.jet[:, 1:] #remove the first var in jet (event_id)
+        # Columns to modify
+        columns_to_modify = [3, 4, 5, 6, 7]
+        # Replace 0 values with -1234 in specified columns
+        for col in columns_to_modify:
+            self.jet[:, col][self.jet[:, col] == 0] = -1234
+
         self.mask = self.X[:,:,2]!=0
         # self.batch_size = batch_size
         self.nevts = h5.File(self.path,'r')['data'].shape[0] if nevts is None else nevts
@@ -531,7 +537,6 @@ class TauDataLoader(DataLoader):
                 'ditau_m_core_lead',
                 'ditau_m_core_subl',
                 'ditau_m_tracks_lead',
-                # 'ditau_m_tracks_subl',
                 'ditau_n_track']
 
 

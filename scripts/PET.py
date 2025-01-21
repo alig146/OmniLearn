@@ -138,7 +138,6 @@ class PET(keras.Model):
         self.ema_body = keras.models.clone_model(self.body)
         self.ema_generator_head = keras.models.clone_model(self.generator_head)
 
-
         
         self.pred_tracker = keras.metrics.CategoricalAccuracy(name="acc")
         self.loss_tracker = keras.metrics.Mean(name="loss")

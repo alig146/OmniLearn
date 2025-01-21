@@ -5,7 +5,7 @@
 #SBATCH --ntasks-per-node 4
 #SBATCH --gpus-per-task 1
 #SBATCH -t 4:00:00
-#SBATCH -A atlas
+#SBATCH -A atlas_g
 #SBATCH --gpu-bind=none
 #SBATCH --image=vmikuni/tensorflow:ngc-23.12-tf2-v1
 #SBATCH --module=gpu,nccl-2.18
