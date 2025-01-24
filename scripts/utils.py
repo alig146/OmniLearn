@@ -9,6 +9,7 @@ import random
 import itertools
 import pickle, copy
 from scipy.stats import norm
+from sklearn.utils import class_weight
 import horovod.tensorflow.keras as hvd
 
 def setup_gpus():
@@ -155,8 +156,28 @@ class DataLoader:
         self.X = h5.File(self.path,'r')['data'][rank:nevts:size]
         self.y = h5.File(self.path,'r')['pid'][rank:nevts:size]
         self.jet = h5.File(self.path,'r')['jet'][rank:nevts:size]
-        self.w = h5.File(self.path,'r')['weights'][rank:nevts:size]
+        # self.w = h5.File(self.path,'r')['weights'][rank:nevts:size]
         # self.w = np.ones_like(self.y)
+        y_labels = self.y
+        # class_weights_np = class_weight.compute_class_weight('balanced', classes=np.unique(y_labels), y=y_labels)
+        class_weights_np = np.array([2.0, 1.0])
+        self.w = class_weights_np[y_labels]
+
+        # n_samples = len(y_labels)
+        # classes = np.unique(y_labels)
+        # n_classes = len(classes)
+        # n_samples_per_class = np.array([np.sum(y_labels == c) for c in classes])  # Convert to numpy array
+        # #also print number of events with y_labels == 0 and y_labels == 1
+        # print(f"Number of events with y_labels == 0: {np.sum(y_labels == 0)}")
+        # print(f"Number of events with y_labels == 1: {np.sum(y_labels == 1)}")
+        # # Print values
+        # print(f"Total samples: {n_samples}")
+        # print(f"Number of classes: {n_classes}")
+        # print(f"Samples per class: {dict(zip(classes, n_samples_per_class))}")
+        # print(f"Calculated weights: {n_samples / (n_classes * n_samples_per_class)}")
+        # print("Class Weights:", self.w) # Optional: Print to verify
+        # print("Test: ", np.array([3.0, 1.0])[y_labels])
+
         self.event_id = self.jet[:, :1]
         self.jet = self.jet[:, 1:] #remove the first var in jet (event_id)
         # Columns to modify

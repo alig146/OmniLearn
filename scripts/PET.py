@@ -34,12 +34,12 @@ from tensorflow.keras.losses import mse, categorical_crossentropy
 #     return normalized_weighted_ce
 
 
-def weighted_crossentropy(y_true, y_pred, sample_weight):
-    bg_to_sig_ratio=65.0
-    weights = tf.where(tf.equal(y_true[:, 1], 1), bg_to_sig_ratio, 1.0)
-    crossentropy = tf.keras.losses.categorical_crossentropy(y_true, y_pred, from_logits=True)
-    weighted_losses = crossentropy * weights
-    return tf.reduce_mean(weighted_losses)
+# def weighted_crossentropy(y_true, y_pred, sample_weight):
+#     bg_to_sig_ratio=65.0
+#     weights = tf.where(tf.equal(y_true[:, 1], 1), bg_to_sig_ratio, 1.0)
+#     crossentropy = tf.keras.losses.categorical_crossentropy(y_true, y_pred, from_logits=True)
+#     weighted_losses = crossentropy * weights
+#     return tf.reduce_mean(weighted_losses)
 
 
 
@@ -182,13 +182,19 @@ class PET(keras.Model):
                             
             if self.mode == 'classifier' or 'all' in self.mode:
                 y_pred,y_mse = self.classifier_head([body,x['input_jet']])
-                # tf.print("jjettt:", x['input_jet'])
-                # tf.print("traaa:", x['input_features'])
-                # tf.print("PPPPPP:", x['input_points'])
-                # tf.print("y_pred:", y_pred)
-                loss_pred = categorical_crossentropy(y, y_pred,from_logits=True)            
-                # loss_pred = weighted_crossentropy(y, y_pred, weights)
+                # -------------------- Modified Loss Calculation --------------------
+                loss_pred_unweighted = categorical_crossentropy(y, y_pred, from_logits=True)
+
+                # Apply sample weights to the loss
+                loss_pred_weighted = loss_pred_unweighted * weights
+
+                # Average the weighted loss over the batch (or sum, depending on your preference)
+                loss_pred = tf.reduce_mean(loss_pred_weighted) # or tf.reduce_sum(loss_pred_weighted)
                 loss += loss_pred
+                # --------------------------------------------------------------------
+                # loss_pred = categorical_crossentropy(y, y_pred,from_logits=True)            
+                # # loss_pred = weighted_crossentropy(y, y_pred, weights)
+                # loss += loss_pred
                 if 'all' in self.mode:    
                     loss_mse = mse(x['input_jet'],y_mse)
                     loss += loss_mse
@@ -284,9 +290,19 @@ class PET(keras.Model):
                     
         if self.mode == 'classifier' or 'all' in self.mode:
             y_pred,y_mse = self.classifier_head([body,x['input_jet']])
-            loss_pred = categorical_crossentropy(y, y_pred,from_logits=True)
-            # loss_pred = weighted_crossentropy(y, y_pred, weights)
+            # -------------------- Modified Loss Calculation --------------------
+            loss_pred_unweighted = categorical_crossentropy(y, y_pred, from_logits=True)
+
+            # Apply sample weights to the loss
+            loss_pred_weighted = loss_pred_unweighted * weights
+
+            # Average the weighted loss over the batch (or sum, depending on your preference)
+            loss_pred = tf.reduce_mean(loss_pred_weighted) # or tf.reduce_sum(loss_pred_weighted)
             loss += loss_pred
+            # --------------------------------------------------------------------
+            # loss_pred = categorical_crossentropy(y, y_pred,from_logits=True)
+            # # loss_pred = weighted_crossentropy(y, y_pred, weights)
+            # loss += loss_pred
             if 'all' in self.mode:
                 loss_mse = mse(x['input_jet'],y_mse)
                 loss += loss_mse
