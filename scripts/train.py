@@ -137,7 +137,9 @@ def main():
                       verbose=hvd.rank() == 0,
                       )
     if hvd.rank() ==0:
-        with open(os.path.join(flags.folder,'histories',utils.get_model_name(flags,flags.fine_tune).replace(".weights.h5",".pkl")),"wb") as f:
+        history_dir = os.path.join(flags.folder, 'histories')
+        os.makedirs(history_dir, exist_ok=True)
+        with open(os.path.join(history_dir, utils.get_model_name(flags,flags.fine_tune).replace(".weights.h5",".pkl")),"wb") as f:
             pickle.dump(hist.history, f)
                             
 

@@ -151,40 +151,104 @@ class DataLoader:
         
         return tf.data.Dataset.zip((tf_zip, tf_y, tf_weights)).cache().shuffle(self.batch_size*100).batch(self.batch_size).prefetch(tf.data.AUTOTUNE)
 
+    # def load_data(self,path, batch_size=512,rank=0,size=1,nevts=None):
+    #     # self.path = path
+    #     self.X = h5.File(self.path,'r')['data'][rank:nevts:size]
+    #     self.y = h5.File(self.path,'r')['pid'][rank:nevts:size]
+    #     self.jet = h5.File(self.path,'r')['jet'][rank:nevts:size]
+    #     # self.w = h5.File(self.path,'r')['weights'][rank:nevts:size]
+    #     # self.w = np.ones_like(self.y)
+    #     y_labels = self.y
+    #     # class_weights_np = class_weight.compute_class_weight('balanced', classes=np.unique(y_labels), y=y_labels)
+    #     class_weights_np = np.array([2.0, 1.0])
+    #     self.w = class_weights_np[y_labels]
+    #     self.event_id = self.jet[:, :1]
+    #     self.jet = self.jet[:, 1:] #remove the first var in jet (event_id)
+    #     # Columns to modify
+    #     columns_to_modify = [3, 4, 5, 6, 7]
+    #     # Replace 0 values with -1234 in specified columns
+    #     for col in columns_to_modify:
+    #         self.jet[:, col][self.jet[:, col] == 0] = -1234
+
+    #     self.mask = self.X[:,:,2]!=0
+    #     # self.batch_size = batch_size
+    #     self.nevts = h5.File(self.path,'r')['data'].shape[0] if nevts is None else nevts
+    #     self.num_part = self.X.shape[1]
+    #     self.num_jet = self.jet.shape[1]
+
     def load_data(self,path, batch_size=512,rank=0,size=1,nevts=None):
         # self.path = path
-        self.X = h5.File(self.path,'r')['data'][rank:nevts:size]
-        self.y = h5.File(self.path,'r')['pid'][rank:nevts:size]
-        self.jet = h5.File(self.path,'r')['jet'][rank:nevts:size]
-        # self.w = h5.File(self.path,'r')['weights'][rank:nevts:size]
-        # self.w = np.ones_like(self.y)
-        y_labels = self.y
+        with h5.File(self.path,'r') as f:
+            self.X = f['data'][rank:nevts:size]
+            self.y = f['pid'][rank:nevts:size]
+            jet_full = f['jet'][rank:nevts:size]
+
+        # Base class weights (background vs signal)
+        y_labels = self.y.astype(np.int32).ravel()
         # class_weights_np = class_weight.compute_class_weight('balanced', classes=np.unique(y_labels), y=y_labels)
-        class_weights_np = np.array([2.0, 1.0])
-        self.w = class_weights_np[y_labels]
+        class_weights_np = np.array([6.0, 1.0])
 
-        # n_samples = len(y_labels)
-        # classes = np.unique(y_labels)
-        # n_classes = len(classes)
-        # n_samples_per_class = np.array([np.sum(y_labels == c) for c in classes])  # Convert to numpy array
-        # #also print number of events with y_labels == 0 and y_labels == 1
-        # print(f"Number of events with y_labels == 0: {np.sum(y_labels == 0)}")
-        # print(f"Number of events with y_labels == 1: {np.sum(y_labels == 1)}")
-        # # Print values
-        # print(f"Total samples: {n_samples}")
-        # print(f"Number of classes: {n_classes}")
-        # print(f"Samples per class: {dict(zip(classes, n_samples_per_class))}")
-        # print(f"Calculated weights: {n_samples / (n_classes * n_samples_per_class)}")
-        # print("Class Weights:", self.w) # Optional: Print to verify
-        # print("Test: ", np.array([3.0, 1.0])[y_labels])
+        # Default: original behaviour for non-tau datasets
+        use_tau_layout = ('TAU' in self.path) or ('tau' in self.path)
 
-        self.event_id = self.jet[:, :1]
-        self.jet = self.jet[:, 1:] #remove the first var in jet (event_id)
+        if use_tau_layout:
+            # New tau jet layout:
+            # [ditau_ditau_pt, ditau_eta, ditau_phi, mcEventNumber,
+            #  ditau_R_max_lead, ..., ditau_n_track]
+            ditau_pt = jet_full[:, 0]
+
+            # Keep mcEventNumber as event_id, but remove it from jet features
+            self.event_id = jet_full[:, 3:4]
+            # Drop pt, eta, phi, mcEventNumber from the jet features used by the network
+            self.jet = jet_full[:, 4:]
+
+            # Start from simple class weights
+            base_class_w = class_weights_np[y_labels]
+
+            # pt-based reweighting: make background pt distribution follow signal
+            pt = ditau_pt
+            sig_mask = y_labels == 1
+            bkg_mask = y_labels == 0
+
+            # Default to ones in case one of the classes is absent
+            pt_weight = np.ones_like(pt, dtype=np.float32)
+
+            if np.any(sig_mask) and np.any(bkg_mask):
+                nbins = 60
+                pt_min = pt.min()
+                pt_max = pt.max()
+                if pt_max > pt_min:
+                    bins = np.linspace(pt_min, pt_max, nbins + 1)
+
+                    sig_hist, _ = np.histogram(pt[sig_mask], bins=bins)
+                    bkg_hist, _ = np.histogram(pt[bkg_mask], bins=bins)
+
+                    # Avoid division by zero; where bkg_hist is zero, keep weight 1
+                    ratio = np.zeros_like(sig_hist, dtype=np.float32)
+                    nonzero = bkg_hist > 0
+                    ratio[nonzero] = sig_hist[nonzero] / bkg_hist[nonzero]
+
+                    # Map each background event to its pt bin and assign corresponding ratio
+                    bin_indices = np.searchsorted(bins, pt, side='right') - 1
+                    valid_bins = (bin_indices >= 0) & (bin_indices < nbins)
+
+                    bkg_valid = bkg_mask & valid_bins
+                    pt_weight[bkg_valid] = ratio[bin_indices[bkg_valid]]
+
+            # Final per-event weights for tau
+            self.w = pt_weight * base_class_w
+        else:
+            # Original behaviour: first jet column is event_id, not used as input
+            self.event_id = jet_full[:, :1]
+            self.jet = jet_full[:, 1:]
+            self.w = class_weights_np[y_labels]
+
         # Columns to modify
         columns_to_modify = [3, 4, 5, 6, 7]
         # Replace 0 values with -1234 in specified columns
         for col in columns_to_modify:
-            self.jet[:, col][self.jet[:, col] == 0] = -1234
+            if col < self.jet.shape[1]:
+                self.jet[:, col][self.jet[:, col] == 0] = -1234
 
         self.mask = self.X[:,:,2]!=0
         # self.batch_size = batch_size
